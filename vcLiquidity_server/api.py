@@ -17,7 +17,7 @@ async def Webhook_post(request: Request, webhook: WebhookPost):
 
     print(await request.json())
 
-    if not webhook_verify(body, request_signature, request_timestamp, config.Discord.PUBLIC_KEY):
+    if not webhook_verify(body, request_signature, request_timestamp, config.VirtualCrypto.public_key):
         raise HTTPException(401, "Bad request signature")
 
     timestamp_error = abs(time() - float(request_timestamp)) > 15

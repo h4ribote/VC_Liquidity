@@ -13,6 +13,7 @@ class MySQL:
 class VirtualCrypto:
     client_id:str = ""
     client_secret:str = ""
+    public_key:str = ""
 
 class Discord:
     BOT_TOKEN:str = ""

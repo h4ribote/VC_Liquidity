@@ -13,6 +13,4 @@ class MySQL:
 class VirtualCrypto:
     client_id:str = ""
     client_secret:str = ""
-
-class Discord:
-    PUBLIC_KEY:str = ""
+    public_key:str = ""
