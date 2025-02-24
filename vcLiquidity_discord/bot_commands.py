@@ -4,6 +4,7 @@ from discord import Embed
 from virtualcrypto import VirtualCryptoClient, Scope
 import pymysql.cursors
 import embedColour
+from decimal import Decimal
 
 VCClient = VirtualCryptoClient(
     client_id=config.VirtualCrypto.client_id,
@@ -23,6 +24,9 @@ def DBConnection():
                                  cursorclass=pymysql.cursors.DictCursor)
     cursor = connection.cursor()
     return connection, cursor
+
+def amount_format(amount:int) -> str:
+    return str(f"{amount:,.6f}".strip('0').rstrip('.'))
 
 def swap_estimation(reserve_input_currency:int, reserve_output_currency:int, swap_fee:int, input_amount:int) -> int:
     fee_multiplier = 1000 - swap_fee
@@ -78,9 +82,9 @@ def bot_info() -> Embed:
             total_base_currency_reserve = 0
         connection.close()
         embed.add_field(name="流動性プールの数",value=pool_count,inline=False)
-        embed.add_field(name="流動性プールの総残高",value=f"{total_base_currency_reserve} {config.Swap.base_currency_unit}",inline=False)
-        embed.add_field(name="ボットの残高",value=f"{bot_base_currency_balance} {config.Swap.base_currency_unit}",inline=False)
-        embed.add_field(name="ボットの招待",value="準備中",inline=False)
+        embed.add_field(name="流動性プールの総残高",value=f"{amount_format(total_base_currency_reserve)} {config.Swap.base_currency_unit}",inline=False)
+        embed.add_field(name="ボットの残高",value=f"{amount_format(bot_base_currency_balance)} {config.Swap.base_currency_unit}",inline=False)
+        embed.add_field(name="ボットの招待",value="[ボットをサーバーに招待する](https://discord.com/oauth2/authorize?client_id=1343234370525200505&permissions=2147552256&integration_type=0&scope=bot)",inline=False)
         embed.add_field(name="サポートサーバー",value="https://discord.gg/wDmkHthbaU",inline=False)
         embed.add_field(name="作成者",value="h4ribote",inline=False)
         return embed
@@ -97,15 +101,15 @@ def swap_info(pair_currency_unit:str) -> Embed:
         return Embed(title="Error",description="Swap pair not found",color=embedColour.Error)
     pool_data = pool_data[0]
     response_embed = Embed(title=f"{pair_currency_unit}/{config.Swap.base_currency_unit}",color=embedColour.LightBlue)
-    response_embed.add_field(name=f"プール残高({pair_currency_unit})",value=pool_data['reserve_pair_currency'],inline=False)
-    response_embed.add_field(name=f"プール残高({config.Swap.base_currency_unit})",value=pool_data['reserve_base_currency'],inline=False)
+    response_embed.add_field(name=f"プール残高({pair_currency_unit})",value=amount_format(pool_data['reserve_pair_currency']),inline=False)
+    response_embed.add_field(name=f"プール残高({config.Swap.base_currency_unit})",value=amount_format(pool_data['reserve_base_currency']),inline=False)
     response_embed.add_field(name="スワップ手数料",value=f"{pool_data['swap_fee']/10}%",inline=False)
 
     estimated_input = int(pool_data['reserve_pair_currency']) // 4 + 5
     estimated_output_amount = swap_estimation(int(pool_data['reserve_pair_currency']),int(pool_data['reserve_base_currency']),int(pool_data['swap_fee']),estimated_input)
     estimated_price = estimated_output_amount / estimated_input
 
-    response_embed.add_field(name="推定価格",value=f"1 {pair_currency_unit} = {estimated_price} {config.Swap.base_currency_unit}",inline=False)
+    response_embed.add_field(name="推定価格",value=f"1 {pair_currency_unit} = {amount_format(estimated_price)} {config.Swap.base_currency_unit}",inline=False)
     return response_embed
 
 def swap_history(currency_unit:str) -> list[Embed]:
@@ -117,14 +121,18 @@ def swap_history(currency_unit:str) -> list[Embed]:
         return [Embed(title="Error",description="History not found",color=embedColour.Error)]
     response_embeds = []
     for history in history_data:
-        response_embed = Embed(title=f"{history['pair_currency_unit']}/{config.Swap.base_currency_unit}",color=embedColour.LightBlue)
+        response_embed = Embed(title=f"{history['pair_currency_unit']}/{config.Swap.base_currency_unit}")
         response_embed.add_field(name="スワップタイプ",value=history['swap_type'],inline=False)
         if history['swap_type'] == "buy":
-            response_embed.add_field(name="入力数量",value=f"{history['input_amount']} {config.Swap.base_currency_unit}",inline=False)
-            response_embed.add_field(name="出力数量",value=f"{history['output_amount']} {currency_unit}",inline=False)
+            response_embed.colour = embedColour.InTx
+            response_embed.add_field(name="入力数量",value=f"{amount_format(history['input_amount'])} {config.Swap.base_currency_unit}",inline=False)
+            response_embed.add_field(name="出力数量",value=f"{amount_format(history['output_amount'])} {currency_unit}",inline=False)
+            response_embed.add_field(name="取引価格",value=f"1 {currency_unit} = {amount_format(history['input_amount']/history['output_amount'])} {config.Swap.base_currency_unit}",inline=False)
         else:
-            response_embed.add_field(name="入力数量",value=f"{history['input_amount']} {currency_unit}",inline=False)
-            response_embed.add_field(name="出力数量",value=f"{history['output_amount']} {config.Swap.base_currency_unit}",inline=False)
+            response_embed.colour = embedColour.OutTx
+            response_embed.add_field(name="入力数量",value=f"{amount_format(history['input_amount'])} {currency_unit}",inline=False)
+            response_embed.add_field(name="出力数量",value=f"{amount_format(history['output_amount'])} {config.Swap.base_currency_unit}",inline=False)
+            response_embed.add_field(name="取引価格",value=f"1 {currency_unit} = {amount_format(history['output_amount']/history['input_amount'])} {config.Swap.base_currency_unit}",inline=False)
         response_embed.add_field(name="スワップ日時",value=f"<t:{history['timestamp']}:f>",inline=False)
         response_embeds.append(response_embed)
         if len(response_embeds) >= 5:
@@ -145,15 +153,15 @@ def swap_calc(pair_currency_unit:str, swap_type:Literal['buy','sell'], input_amo
         estimated_output_amount = swap_estimation(int(pool_data['reserve_pair_currency']),int(pool_data['reserve_base_currency']),int(pool_data['swap_fee']),input_amount)
     response_embed = Embed(title=f"{pair_currency_unit}/{config.Swap.base_currency_unit}",color=embedColour.LightBlue)
     if swap_type == "buy":
-        response_embed.add_field(name="入力数量",value=f"{input_amount} {config.Swap.base_currency_unit}",inline=False)
-        response_embed.add_field(name="出力数量",value=f"{estimated_output_amount} {pair_currency_unit}",inline=False)
+        response_embed.add_field(name="入力数量",value=f"{amount_format(input_amount)} {config.Swap.base_currency_unit}",inline=False)
+        response_embed.add_field(name="出力数量",value=f"{amount_format(estimated_output_amount)} {pair_currency_unit}",inline=False)
         estimated_price = input_amount / estimated_output_amount
-        response_embed.add_field(name="推定価格",value=f"1 {pair_currency_unit} = {estimated_price} {config.Swap.base_currency_unit}",inline=False)
+        response_embed.add_field(name="推定価格",value=f"1 {pair_currency_unit} = {amount_format(estimated_price)} {config.Swap.base_currency_unit}",inline=False)
     else:
-        response_embed.add_field(name="入力数量",value=f"{input_amount} {pair_currency_unit}",inline=False)
-        response_embed.add_field(name="出力数量",value=f"{estimated_output_amount} {config.Swap.base_currency_unit}",inline=False)
+        response_embed.add_field(name="入力数量",value=f"{amount_format(input_amount)} {pair_currency_unit}",inline=False)
+        response_embed.add_field(name="出力数量",value=f"{amount_format(estimated_output_amount)} {config.Swap.base_currency_unit}",inline=False)
         estimated_price = estimated_output_amount / input_amount
-        response_embed.add_field(name="推定価格",value=f"1 {pair_currency_unit} = {estimated_price} {config.Swap.base_currency_unit}",inline=False)
+        response_embed.add_field(name="推定価格",value=f"1 {pair_currency_unit} = {amount_format(estimated_price)} {config.Swap.base_currency_unit}",inline=False)
     return response_embed
 
 def swap_exec(user_id:int,pair_currency_unit:str, swap_type:Literal['buy','sell'], input_amount:int) -> Embed:
@@ -207,3 +215,15 @@ def create_liquidly(user_id:int,pair_currency_unit:str) -> Embed:
     except Exception as e:
         print(e)
         return Embed(title="Error",description="内部エラー",color=embedColour.Error)
+
+def available_currency() -> Embed:
+    connection, cursor = DBConnection()
+    cursor.execute("SELECT * FROM liquidity LIMIT 100")
+    pair_data = cursor.fetchall()
+    connection.close()
+    if not pair_data:
+        return Embed(title="Error",description="有効な通貨ペアが存在しません\n`/create_liquidly`から新たな流動性プールを作成してください",color=embedColour.Error)
+    response_embed = Embed(title="取引可能な通貨ペアの一覧(+預け入れ数量)",description="最大100件まで表示",color=embedColour.LightBlue)
+    for pair in pair_data:
+        response_embed.add_field(name=f"{pair['pair_currency_unit']}/{config.Swap.base_currency_unit}",value=f"{amount_format(pair['reserve_pair_currency'])} {pair['pair_currency_unit']}",inline=False)
+    return response_embed

@@ -10,7 +10,7 @@ tree = app_commands.CommandTree(client)
 @client.event
 async def on_ready():
     print(f'" {client.user} "としてログイン中')
-    await client.change_presence(activity=discord.Game(name="Amazing Bot by h4ribote"),status=discord.Status.online)
+    await client.change_presence(activity=discord.Game(name="VirtualCrypto swap bot by h4ribote"),status=discord.Status.online)
     await tree.sync()
 
 @client.event
@@ -40,6 +40,12 @@ async def pool_info_command(interaction:discord.Interaction, unit:str):
     await interaction.response.defer(thinking=True)
     await interaction.followup.send(embed=cmds.swap_info(unit))
 
+@tree.command(name="available_currency",description="利用可能な通貨ペアの一覧を表示します")
+@app_commands.allowed_installs(True,True)
+async def available_currency_command(interaction:discord.Interaction):
+    await interaction.response.defer(thinking=True)
+    await interaction.followup.send(embed=cmds.available_currency())
+
 @tree.command(name="swap_history",description="スワップの履歴を表示します")
 @app_commands.allowed_installs(True,True)
 @app_commands.describe(unit="通貨単位")
@@ -57,7 +63,7 @@ async def swap_calc_command(interaction:discord.Interaction, unit:str, swap_type
 @tree.command(name="swap_exec",description="スワップを実行します")
 @app_commands.allowed_installs(True,True)
 @app_commands.describe(unit="通貨単位",swap_type="購入/売却",input_amount="入力する数量")
-async def swap_calc_command(interaction:discord.Interaction, unit:str, swap_type:Literal['buy','sell'], input_amount:int):
+async def swap_exec_command(interaction:discord.Interaction, unit:str, swap_type:Literal['buy','sell'], input_amount:int):
     await interaction.response.defer(thinking=True)
     await interaction.followup.send(embed=cmds.swap_exec(interaction.user.id,unit,swap_type,input_amount))
 
