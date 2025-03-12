@@ -1,6 +1,6 @@
 # VC_Liquidity
 VirtualCryptoの通貨で流動性プールを作って取引するdiscordボット(+それを稼働させるサーバー)です  
-[ボットをサーバーに招待する](https://discord.com/oauth2/authorize?client_id=1343234370525200505&permissions=2147552256&integration_type=0&scope=bot)  
+[ボットをサーバーに招待する](https://discord.com/oauth2/authorize?client_id=1343234370525200505&permissions=2147552256&integration_type=0&scope=bot) (取引所の需要めちゃくちゃあると思って稼働してるのに使われてなくて草)  
 
 ## 特徴・できること
 - 基軸通貨(VC_Liquidity)対各通貨のペアで常時取引が可能です
